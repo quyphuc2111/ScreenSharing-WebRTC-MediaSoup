@@ -1,4 +1,4 @@
-import { Device, types } from 'mediasoup-client';
+import { Device, types, detectDevice } from 'mediasoup-client';
 
 type Transport = types.Transport;
 type Producer = types.Producer;
@@ -43,6 +43,12 @@ export class MediasoupClient {
     this.peerId = peerId;
     this.isTeacher = isTeacher;
 
+    // Check device support first
+    const handlerName = detectDevice();
+    if (!handlerName) {
+      throw new Error('Browser không hỗ trợ WebRTC. Vui lòng sử dụng Chrome, Firefox hoặc Edge.');
+    }
+
     this.events.onConnectionStateChange?.('connecting');
 
     return new Promise((resolve, reject) => {
@@ -50,16 +56,24 @@ export class MediasoupClient {
 
       this.ws.onopen = async () => {
         try {
-          // Join room
-          await this.sendRequest('join', { roomId, peerId, name, isTeacher });
+          // Join room - response contains rtpCapabilities
+          const joinResponse = await this.sendRequest('join', { roomId, peerId, name, isTeacher });
           
-          // Load device
+          // Store rtpCapabilities from response
+          this.rtpCapabilities = joinResponse.rtpCapabilities;
+          
+          if (!this.rtpCapabilities) {
+            throw new Error('Server không trả về rtpCapabilities');
+          }
+
+          // Load device with rtpCapabilities
           this.device = new Device();
-          await this.device.load({ routerRtpCapabilities: this.rtpCapabilities! });
+          await this.device.load({ routerRtpCapabilities: this.rtpCapabilities });
           
           this.events.onConnectionStateChange?.('connected');
           resolve();
         } catch (error) {
+          this.events.onError?.(error instanceof Error ? error.message : 'Kết nối thất bại');
           reject(error);
         }
       };
@@ -71,7 +85,7 @@ export class MediasoupClient {
 
       this.ws.onerror = () => {
         this.events.onConnectionStateChange?.('error');
-        this.events.onError?.('WebSocket error');
+        this.events.onError?.('Lỗi kết nối WebSocket');
         reject(new Error('WebSocket error'));
       };
 
@@ -93,11 +107,8 @@ export class MediasoupClient {
       return;
     }
 
-    // Handle events
+    // Handle server-pushed events
     switch (type) {
-      case 'joined':
-        this.rtpCapabilities = data.rtpCapabilities;
-        break;
       case 'newProducer':
         this.events.onNewProducer?.(data.producerId, data.kind);
         break;
@@ -107,7 +118,6 @@ export class MediasoupClient {
       case 'peerLeft':
         this.events.onPeerLeft?.(data.peerId, data.wasTeacher);
         if (data.wasTeacher) {
-          // Teacher left, close all consumers
           this.closeAllConsumers();
         }
         break;
@@ -120,23 +130,22 @@ export class MediasoupClient {
   private sendRequest(type: string, data?: any): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-        reject(new Error('WebSocket not connected'));
+        reject(new Error('WebSocket chưa kết nối'));
         return;
       }
 
-      // Map request type to expected response type
       const responseType = this.getResponseType(type);
       this.pendingRequests.set(responseType, { resolve, reject });
 
       this.ws.send(JSON.stringify({ type, data }));
 
-      // Timeout
+      // Timeout 15s
       setTimeout(() => {
         if (this.pendingRequests.has(responseType)) {
           this.pendingRequests.delete(responseType);
-          reject(new Error(`Request ${type} timed out`));
+          reject(new Error(`Request ${type} timeout`));
         }
-      }, 10000);
+      }, 15000);
     });
   }
 
@@ -154,7 +163,7 @@ export class MediasoupClient {
   }
 
   async createSendTransport(): Promise<void> {
-    if (!this.device) throw new Error('Device not loaded');
+    if (!this.device) throw new Error('Device chưa được khởi tạo');
 
     const params = await this.sendRequest('createTransport', { direction: 'send' });
 
@@ -185,7 +194,7 @@ export class MediasoupClient {
   }
 
   async createRecvTransport(): Promise<void> {
-    if (!this.device) throw new Error('Device not loaded');
+    if (!this.device) throw new Error('Device chưa được khởi tạo');
 
     const params = await this.sendRequest('createTransport', { direction: 'recv' });
 
@@ -217,9 +226,9 @@ export class MediasoupClient {
       const producer = await this.sendTransport!.produce({
         track: videoTrack,
         encodings: [
-          { maxBitrate: 500000, scaleResolutionDownBy: 4 },  // Low
-          { maxBitrate: 1000000, scaleResolutionDownBy: 2 }, // Medium
-          { maxBitrate: 2000000 },                            // High
+          { maxBitrate: 500000, scaleResolutionDownBy: 4 },
+          { maxBitrate: 1000000, scaleResolutionDownBy: 2 },
+          { maxBitrate: 2000000 },
         ],
         codecOptions: {
           videoGoogleStartBitrate: 500,
@@ -257,15 +266,15 @@ export class MediasoupClient {
       await this.createRecvTransport();
     }
 
-    // Get all producers from teacher
     const producers = await this.sendRequest('getProducers', {});
-    
     const stream = new MediaStream();
 
-    for (const { producerId } of producers) {
-      const consumer = await this.consume(producerId);
-      if (consumer) {
-        stream.addTrack(consumer.track);
+    if (Array.isArray(producers)) {
+      for (const { producerId } of producers) {
+        const consumer = await this.consume(producerId);
+        if (consumer) {
+          stream.addTrack(consumer.track);
+        }
       }
     }
 
