@@ -66,9 +66,15 @@ export function useMediasoup() {
       
       // Students: create recv transport and consume existing producers
       if (!isTeacher) {
-        await client.consumeAll();
+        try {
+          await client.consumeAll();
+        } catch (consumeErr) {
+          // Không có producer nào - teacher chưa share, không phải lỗi
+          console.log('No producers yet, waiting for teacher to share...');
+        }
       }
     } catch (err) {
+      console.error('Connection error:', err);
       setError(err instanceof Error ? err.message : 'Connection failed');
     }
   }, []);
