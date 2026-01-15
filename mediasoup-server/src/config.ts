@@ -77,11 +77,11 @@ export const config = {
   // Tối ưu cho 30-50 clients
   maxClientsPerRoom: 50,
   
-  // Video constraints cho teacher - tối ưu cho máy yếu
+  // Video constraints cho teacher - 1080p
   videoConstraints: {
-    width: { ideal: 1280, max: 1280 }, // 720p max
-    height: { ideal: 720, max: 720 },
-    frameRate: { ideal: 24, max: 30 }, // 24fps để giảm CPU
+    width: { ideal: 1920, max: 1920 },
+    height: { ideal: 1080, max: 1080 },
+    frameRate: { ideal: 30, max: 60 },
   },
 };
 

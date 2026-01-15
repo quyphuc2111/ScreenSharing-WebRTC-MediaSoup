@@ -375,3 +375,11 @@ h1 {
   color: var(--text-secondary);
   font-size: 1.2rem;
 }
+
+
+/* Full width button */
+.btn.full-width {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1.2rem;
+}

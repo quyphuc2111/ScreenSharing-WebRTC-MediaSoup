@@ -226,12 +226,12 @@ export class MediasoupClient {
       const producer = await this.sendTransport!.produce({
         track: videoTrack,
         encodings: [
-          { maxBitrate: 500000, scaleResolutionDownBy: 4 },
-          { maxBitrate: 1000000, scaleResolutionDownBy: 2 },
-          { maxBitrate: 2000000 },
+          { maxBitrate: 800000, scaleResolutionDownBy: 4 },   // Low ~480p
+          { maxBitrate: 1500000, scaleResolutionDownBy: 2 },  // Medium ~720p
+          { maxBitrate: 4000000 },                             // High 1080p
         ],
         codecOptions: {
-          videoGoogleStartBitrate: 500,
+          videoGoogleStartBitrate: 1000,
         },
       });
       this.producers.set(producer.id, producer);

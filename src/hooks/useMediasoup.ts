@@ -86,9 +86,9 @@ export function useMediasoup() {
       // Get screen with system audio
       const screenStream = await navigator.mediaDevices.getDisplayMedia({
         video: {
-          width: { ideal: 1280, max: 1280 },
-          height: { ideal: 720, max: 720 },
-          frameRate: { ideal: 24, max: 30 },
+          width: { ideal: 1920, max: 1920 },
+          height: { ideal: 1080, max: 1080 },
+          frameRate: { ideal: 30, max: 60 },
         },
         audio: withAudio,
       });

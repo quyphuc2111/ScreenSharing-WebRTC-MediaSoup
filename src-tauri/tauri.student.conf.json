@@ -1,18 +1,18 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Screen Sharing Teacher",
+  "productName": "Screen Sharing Student",
   "version": "0.1.0",
-  "identifier": "com.zenadev.screensharing.teacher",
+  "identifier": "com.zenadev.screensharing.student",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
+    "beforeBuildCommand": "npx vite build --config vite.config.student.ts",
+    "frontendDist": "../dist-student"
   },
   "app": {
     "windows": [
       {
-        "title": "Screen Sharing - Giáo viên",
+        "title": "Screen Sharing - Học sinh",
         "width": 1024,
         "height": 768,
         "minWidth": 800,
@@ -33,9 +33,6 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ],
-    "resources": [
-      "binaries/**/*"
     ]
   }
 }

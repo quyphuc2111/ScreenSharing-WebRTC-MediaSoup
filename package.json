@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:student": "tsc && vite build --config vite.config.student.ts index-student.html",
     "preview": "vite preview",
     "tauri": "tauri",
     "server:install": "cd mediasoup-server && npm install",

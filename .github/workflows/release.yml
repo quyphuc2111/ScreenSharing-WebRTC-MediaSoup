@@ -9,7 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-teacher:
+    name: Build Teacher App
     runs-on: windows-latest
 
     steps:
@@ -39,27 +40,85 @@ jobs:
         working-directory: mediasoup-server
 
       - name: Download Node.js portable
+        shell: bash
         run: |
           curl -L -o node.zip https://nodejs.org/dist/v20.18.0/node-v20.18.0-win-x64.zip
-          7z x node.zip -onode-portable
-          mv node-portable/node-v20.18.0-win-x64 src-tauri/binaries/node
+          unzip -q node.zip
+          mkdir -p src-tauri/binaries/node
+          mv node-v20.18.0-win-x64/* src-tauri/binaries/node/
 
       - name: Prepare sidecar
+        shell: bash
         run: |
           mkdir -p src-tauri/binaries/server
           cp -r mediasoup-server/dist src-tauri/binaries/server/
           cp -r mediasoup-server/node_modules src-tauri/binaries/server/
           cp mediasoup-server/package.json src-tauri/binaries/server/
-        shell: bash
 
-      - name: Build Tauri app
+      - name: Build Teacher App
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Screen Sharing ${{ github.ref_name }}'
-          releaseBody: 'See the assets to download and install this version.'
+          releaseBody: |
+            ## Downloads
+            - **Teacher App**: Dành cho giáo viên (có server tích hợp)
+            - **Student App**: Dành cho học sinh (nhẹ, chỉ client)
+          releaseDraft: false
+          prerelease: false
+          args: --target x86_64-pc-windows-msvc --bundles nsis
+
+  build-student:
+    name: Build Student App
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Student frontend
+        shell: bash
+        run: |
+          npx vite build --config vite.config.student.ts
+          mv dist-student/index-student.html dist-student/index.html
+
+      - name: Prepare Student Tauri config
+        shell: bash
+        run: |
+          cp src-tauri/tauri.student.conf.json src-tauri/tauri.conf.json
+          cat > src-tauri/src/lib.rs << 'EOF'
+          #[cfg_attr(mobile, tauri::mobile_entry_point)]
+          pub fn run() {
+              tauri::Builder::default()
+                  .plugin(tauri_plugin_opener::init())
+                  .run(tauri::generate_context!())
+                  .expect("error while running tauri application");
+          }
+          EOF
+
+      - name: Build Student App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Screen Sharing ${{ github.ref_name }}'
           releaseDraft: false
           prerelease: false
           args: --target x86_64-pc-windows-msvc --bundles nsis
