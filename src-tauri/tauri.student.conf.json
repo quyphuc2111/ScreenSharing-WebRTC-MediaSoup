@@ -5,8 +5,8 @@
   "identifier": "com.zenadev.screensharing.student",
   "build": {
     "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npx vite build --config vite.config.student.ts",
+    "devUrl": "http://localhost:1421",
+    "beforeBuildCommand": "",
     "frontendDist": "../dist-student"
   },
   "app": {

@@ -64,8 +64,8 @@ jobs:
           releaseName: 'Screen Sharing ${{ github.ref_name }}'
           releaseBody: |
             ## Downloads
-            - **Teacher App**: Dành cho giáo viên (có server tích hợp)
-            - **Student App**: Dành cho học sinh (nhẹ, chỉ client)
+            - **Screen Sharing Teacher**: Dành cho giáo viên (có server tích hợp)
+            - **Screen Sharing Student**: Dành cho học sinh (nhẹ, chỉ client)
           releaseDraft: false
           prerelease: false
           args: --target x86_64-pc-windows-msvc --bundles nsis
@@ -98,11 +98,48 @@ jobs:
           npx vite build --config vite.config.student.ts
           mv dist-student/index-student.html dist-student/index.html
 
-      - name: Prepare Student Tauri config
+      - name: Setup Student Tauri
         shell: bash
         run: |
-          cp src-tauri/tauri.student.conf.json src-tauri/tauri.conf.json
-          cat > src-tauri/src/lib.rs << 'EOF'
+          # Update tauri.conf.json for student
+          cat > src-tauri/tauri.conf.json << 'CONF'
+          {
+            "$schema": "https://schema.tauri.app/config/2",
+            "productName": "Screen Sharing Student",
+            "version": "0.1.0",
+            "identifier": "com.zenadev.screensharing.student",
+            "build": {
+              "frontendDist": "../dist-student"
+            },
+            "app": {
+              "windows": [
+                {
+                  "title": "Screen Sharing - Học sinh",
+                  "width": 1024,
+                  "height": 768,
+                  "center": true
+                }
+              ],
+              "security": {
+                "csp": null
+              }
+            },
+            "bundle": {
+              "active": true,
+              "targets": ["nsis"],
+              "icon": [
+                "icons/32x32.png",
+                "icons/128x128.png",
+                "icons/128x128@2x.png",
+                "icons/icon.icns",
+                "icons/icon.ico"
+              ]
+            }
+          }
+          CONF
+
+          # Simplify lib.rs for student (no server)
+          cat > src-tauri/src/lib.rs << 'RUST'
           #[cfg_attr(mobile, tauri::mobile_entry_point)]
           pub fn run() {
               tauri::Builder::default()
@@ -110,7 +147,7 @@ jobs:
                   .run(tauri::generate_context!())
                   .expect("error while running tauri application");
           }
-          EOF
+          RUST
 
       - name: Build Student App
         uses: tauri-apps/tauri-action@v0
