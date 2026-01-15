@@ -38,6 +38,20 @@ jobs:
         run: npm run build
         working-directory: mediasoup-server
 
+      - name: Download Node.js portable
+        run: |
+          curl -L -o node.zip https://nodejs.org/dist/v20.18.0/node-v20.18.0-win-x64.zip
+          7z x node.zip -onode-portable
+          mv node-portable/node-v20.18.0-win-x64 src-tauri/binaries/node
+
+      - name: Prepare sidecar
+        run: |
+          mkdir -p src-tauri/binaries/server
+          cp -r mediasoup-server/dist src-tauri/binaries/server/
+          cp -r mediasoup-server/node_modules src-tauri/binaries/server/
+          cp mediasoup-server/package.json src-tauri/binaries/server/
+        shell: bash
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:

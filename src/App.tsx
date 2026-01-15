@@ -19,9 +19,10 @@ function App() {
   const [serverUrl, setServerUrl] = useState('ws://localhost:3016');
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
   const [serverStatus, setServerStatus] = useState<'starting' | 'running' | 'stopped' | 'error'>('stopped');
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  // Start server automatically when app opens (Teacher mode)
   useEffect(() => {
+    // Check if server is already running
     checkServerStatus();
   }, []);
 
@@ -38,6 +39,7 @@ function App() {
 
   const startServer = async () => {
     setServerStatus('starting');
+    setServerError(null);
     try {
       const info = await invoke<ServerInfo>('start_server');
       setServerInfo(info);
@@ -46,6 +48,7 @@ function App() {
     } catch (error) {
       console.error('Failed to start server:', error);
       setServerStatus('error');
+      setServerError(String(error));
     }
   };
 
@@ -62,6 +65,10 @@ function App() {
   const handleSelectMode = (selectedMode: 'teacher' | 'student') => {
     if (!name.trim()) {
       alert('Vui lòng nhập tên của bạn!');
+      return;
+    }
+    if (!serverUrl.trim()) {
+      alert('Vui lòng nhập Server URL!');
       return;
     }
     setMode(selectedMode);
@@ -98,8 +105,8 @@ function App() {
       <h1>🖥️ Screen Sharing</h1>
       <p className="subtitle">Chia sẻ màn hình cho lớp học</p>
 
-      <div className="server-status">
-        <h3>Server Status</h3>
+      <div className="server-section">
+        <h3>🖧 Mediasoup Server</h3>
         <div className={`status-indicator ${serverStatus}`}>
           {serverStatus === 'running' && '🟢 Server đang chạy'}
           {serverStatus === 'starting' && '🟡 Đang khởi động...'}
@@ -107,6 +114,12 @@ function App() {
           {serverStatus === 'error' && '❌ Lỗi khởi động server'}
         </div>
         
+        {serverError && (
+          <div className="error-box">
+            <p>{serverError}</p>
+          </div>
+        )}
+
         {serverInfo && (
           <div className="server-info">
             <p>IP: <strong>{serverInfo.ip}</strong></p>
@@ -121,6 +134,11 @@ function App() {
           {serverStatus === 'stopped' && (
             <button onClick={startServer} className="btn primary">
               ▶️ Khởi động Server
+            </button>
+          )}
+          {serverStatus === 'error' && (
+            <button onClick={startServer} className="btn primary">
+              🔄 Thử lại
             </button>
           )}
           {serverStatus === 'running' && (
@@ -153,13 +171,14 @@ function App() {
         </div>
 
         <div className="form-group">
-          <label>Server URL (cho học sinh):</label>
+          <label>Server URL:</label>
           <input
             type="text"
             value={serverUrl}
             onChange={(e) => setServerUrl(e.target.value)}
             placeholder="ws://192.168.1.x:3016"
           />
+          <small>Giáo viên: dùng URL ở trên | Học sinh: nhập URL từ giáo viên</small>
         </div>
       </div>
 
