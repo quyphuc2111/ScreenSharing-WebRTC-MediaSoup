@@ -46,6 +46,6 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'Screen Sharing ${{ github.ref_name }}'
           releaseBody: 'See the assets to download and install this version.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: --target x86_64-pc-windows-msvc --bundles nsis
