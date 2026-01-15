@@ -48,4 +48,4 @@ jobs:
           releaseBody: 'See the assets to download and install this version.'
           releaseDraft: true
           prerelease: false
-          args: --target x86_64-pc-windows-msvc --bundles exe
+          args: --target x86_64-pc-windows-msvc --bundles nsis
